@@ -1,0 +1,12 @@
+[Unit]
+Description=deluge container
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker start -a deluge
+ExecStop=/usr/bin/docker stop -t 2 deluge
+
+[Install]
+WantedBy=default.target
