@@ -4,7 +4,7 @@ After fresh Ubuntu Server 16.04 install, complete the following:
 
 1. Run 'sudo passwd root' to set a root password.
 2. Type 'git clone https://github.com/aberg83/docker-server.git docker-server'.
-3. Move to scripts folder 'cd ~/docker-server/scripts/'.
+3. Move to script folder 'cd ~/docker-server/'.
 4. Run 'su root'. Enter root password previously set. 
 5. Run './docker-server.sh'.
 
