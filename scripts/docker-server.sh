@@ -190,13 +190,13 @@ function _nginx() {
 			listen 443 default_server;
 			server_name $domain www.$domain;
 			ssl on;
-			ssl_certificate /config/keys/bergplex.crt;
-			ssl_certificate_key /config/keys/bergplex.key;
+			ssl_certificate /config/keys/fullchain.pem;
+			ssl_certificate_key /config/keys/privkey.pem;
 
 			auth_basic "Restricted";
 			auth_basic_user_file /config/.htpasswd;
 
-			root /var/www/html;
+			root /config/www;
 
 			location ~ /.well-known {
         		        allow all;
@@ -321,8 +321,8 @@ echo -n "Applying reverse proxy settings to containers ...";_reverseproxy >/dev/
 echo
 echo -n "Setting up nginx with basic authentication and SSL certificate ...";_nginx >/dev/null 2>&1 & spinner $!;echo
 letsencrypt certonly -a webroot --webroot-path=$config/nginx/www -d $domain -d www.$domain
-ln -s /etc/letsencrypt/live/$domain/fullchain.pem $config/nginx/keys/bergplex.crt
-ln -s /etc/letsencrypt/live/$domain/privkey.pum $config/nginx/keys/bergplex.key
+ln -s /etc/letsencrypt/live/$domain/fullchain.pem $config/nginx/keys/fullchain.pem
+ln -s /etc/letsencrypt/live/$domain/privkey.pem $config/nginx/keys/privkey.pem
 docker start nginx
 echo
 echo -n "Setting permissions ..."; chown -R $user:$user $config $media $downloads & spinner $!;echo
