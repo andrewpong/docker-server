@@ -192,11 +192,11 @@ function _nginx() {
 			server_name $domain www.$domain;
 			ssl on;
 
-			ssl_certificate $config/nginx/keys/server.crt;
-        		ssl_certificate_key $config/nginx/keys/server.key;
+			ssl_certificate /config/keys/server.crt;
+        		ssl_certificate_key /config/keys/server.key;
 
 			auth_basic "Restricted";
-			auth_basic_user_file $config/.htpasswd;
+			auth_basic_user_file /config/.htpasswd;
 
 			location /sonarr {
 				proxy_pass http://$ip:8989;
