@@ -15,16 +15,16 @@ Upon reboot, you will be able to access the apps at "yourdomain.com"/"appname". 
 Enjoy!
 
 Installed docker containers:
- linuxserver/plex
- linuxserver/couchpotato
- linuxserver/sonarr
- linuxserver/plexpy
- linuxserver/plexrequests
- linuxserver/nginx
- linuxserver/jackett
- linuxserver/sabnzbd
- linuxserver/deluge
- jrcs/crashplan
+- linuxserver/plex
+- linuxserver/couchpotato
+- linuxserver/sonarr
+- linuxserver/plexpy
+- linuxserver/plexrequests
+- linuxserver/nginx
+- linuxserver/jackett
+- linuxserver/sabnzbd
+- linuxserver/deluge
+- jrcs/crashplan
 
 Known issues:
- 1. Sometimes docker install will fail. If it does, run the script again.
+- Sometimes docker install will fail. If it does, run the script again.
