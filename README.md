@@ -1,3 +1,5 @@
+Docker-Server
+
 After fresh Ubuntu Server 16.04 install, complete the following:
 
 1. Run 'sudo passwd root' to set a root password.
@@ -11,3 +13,18 @@ The above assumes that you are initially logged in as a master user with sudo pr
 Upon reboot, you will be able to access the apps at "yourdomain.com"/"appname". Your browser will prompt you for the login credentials you set within the script.
 
 Enjoy!
+
+Installed docker containers:
+ linuxserver/plex
+ linuxserver/couchpotato
+ linuxserver/sonarr
+ linuxserver/plexpy
+ linuxserver/plexrequests
+ linuxserver/nginx
+ linuxserver/jackett
+ linuxserver/sabnzbd
+ linuxserver/deluge
+ jrcs/crashplan
+
+Known issues:
+ 1. Sometimes docker install will fail. If it does, run the script again.
