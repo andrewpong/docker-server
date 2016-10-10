@@ -143,7 +143,7 @@ function _createcontainers() {
 
     for d in $config/* ; do
 	dir=$(basename $d)
-	cat > /etc/systemd/system/$dir.service <<-'EOF'
+	cat > /etc/systemd/system/$dir.service << EOF
 	[Unit]
 	Description=$dir container
 	Requires=docker.service
@@ -278,7 +278,7 @@ spinner() {
 
 OK=$(echo -e "[ ${bold}${green}DONE${normal} ]")
 echo
-echo -n "##### BERGPLEX MEDIA SERVER SCRIPT #####";echo
+echo -n "##### DOCKER-SERVER #####";echo
 echo
 read -p "User for containers and basic authentication?  " user
 while true
