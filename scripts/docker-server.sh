@@ -263,6 +263,11 @@ EOF
 
 }
 
+function _update() {
+	apt-get update
+	apt-get upgrade -y
+}
+
 spinner() {
     local pid=$1
     local delay=0.25
@@ -279,8 +284,6 @@ spinner() {
 }
 
 OK=$(echo -e "[ ${bold}${green}DONE${normal} ]")
-apt-get update
-apt-get upgrade -y
 echo
 echo -n "##### DOCKER-SERVER #####";echo
 echo
@@ -303,6 +306,8 @@ echo
 echo -n "What is the path to media files? (do not include trailing /) "; read media
 echo
 echo -n "What is the path to downloads? (do not include trailing /) "; read downloads
+echo
+echo -n "Updating / upgrading system ...";_update >/dev/null 2>&1 & spinner $!;echo
 echo
 echo -n "Installing docker ...";_installdocker >/dev/null 2>&1 & spinner $!;echo
 usermod -aG docker $user
