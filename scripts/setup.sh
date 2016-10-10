@@ -188,9 +188,80 @@ function _nginx() {
 
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default # Adjust IP in this file as needed
-        cp ../nginx/default $config/nginx/nginx/site-confs/
+	ip=$(wget -qO- http://ipecho.net/plain)
+	cat > $config/nginx/nginx/site-confs/default << EOF
+server {
+listen 80 default_server;
+server_name $domain www.$domain;
+return 301 https://\$server_name\$request_uri;
+}
+
+server {
+listen 443 default_server;
+server_name $domain www.$domain;
+ssl on;
+ssl_certificate /config/keys/bergplex.crt;
+ssl_certificate_key /config/keys/bergplex.key;
+
+auth_basic "Restricted";
+auth_basic_user_file /config/.htpasswd;
+
+location /sonarr {
+proxy_pass http://$ip:8989;
+proxy_set_header Host \$host;
+proxy_set_header X-Real-IP \$remote_addr;
+proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+}
+
+location /deluge {
+proxy_pass http://$ip:8112/;
+proxy_set_header X-Deluge-Base "/deluge/";
+proxy_set_header Host \$host;
+proxy_set_header X-Real-IP \$remote_addr;
+proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+}
+
+location /requests {
+auth_basic off;
+proxy_pass http://$ip:3000;
+proxy_set_header Host \$host;
+proxy_set_header X-Real-IP \$remote_addr;
+proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+}
+
+location /sabnzbd {
+proxy_pass http://$ip:8080;
+proxy_set_header Host \$host;
+proxy_set_header X-Real-IP \$remote_addr;
+proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+}
+
+location /couchpotato {
+proxy_pass http://$ip:5050;
+proxy_set_header Host \$host;
+proxy_set_header X-Real-IP \$remote_addr;
+proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+}
+
+location /plexpy {
+proxy_pass http://$ip:8181;
+proxy_set_header Host \$host;
+proxy_set_header X-Real-IP \$remote_addr;
+proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+}
+
+location /jackett/ {
+proxy_pass http://$ip:9117/;
+proxy_set_header Host \$host;
+proxy_set_header X-Real-IP \$remote_addr;
+proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+}
+
+}
+EOF
+	chown $user:$user $config/nginx/nginx/site-confs/default
         apt-get install -y apache2-utils
-	htpasswd -b -c $config/nginx $user $password
+	htpasswd -b -c $config/nginx/.htpasswd $user $password
         cp ../ssl/bergplex.* $config/nginx/keys
         docker start nginx
 
@@ -226,6 +297,8 @@ do
     [ "$password" = "$password2" ] && break
     echo "Please try again"
 done
+echo
+echo -n "What is your domain name? (e.g. bergplex.com) "; read domain
 echo
 echo -n "What is the path to docker container config files? (do not include trailing /) "; read config
 echo
