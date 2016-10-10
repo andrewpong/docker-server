@@ -15,9 +15,6 @@ function _installdocker() {
 
 function _createcontainers() {
 
-    cp -R ../systemd/*.service /etc/systemd/system
-    systemctl daemon-reload
-
     # Plex
 	docker pull linuxserver/plex
         docker create \
@@ -30,7 +27,6 @@ function _createcontainers() {
         -v $media:/data \
         linuxserver/plex
 	docker start plex
-	systemctl enable plex
 
     # CouchPotato
 	docker pull linuxserver/couchpotato
@@ -44,7 +40,6 @@ function _createcontainers() {
         -p 5050:5050 \
         linuxserver/couchpotato
 	docker start couchpotato
-	systemctl enable couchpotato
 
     # Sonarr
 	docker pull linuxserver/sonarr
@@ -58,7 +53,6 @@ function _createcontainers() {
         -v $downloads:/downloads \
         linuxserver/sonarr
 	docker start sonarr
-	systemctl enable sonarr
 
     # PlexPy
 	docker pull linuxserver/plexpy
@@ -71,7 +65,6 @@ function _createcontainers() {
         -p 8181:8181 \
         linuxserver/plexpy
 	docker start plexpy
-	systemctl enable plexpy
 
     # SABnzbd
 	docker pull linuxserver/sabnzbd
@@ -85,7 +78,6 @@ function _createcontainers() {
         -p 8080:8080 -p 9090:9090 \
         linuxserver/sabnzbd
 	docker start sabnzbd
-	systemctl enable sabnzbd
 
     # Deluge
 	docker pull linuxserver/deluge
@@ -98,7 +90,6 @@ function _createcontainers() {
         -v $config/deluge:/config \
         linuxserver/deluge
 	docker start deluge
-	systemctl enable deluge
 
     # Jackett
 	docker pull linuxserver/jackett
@@ -111,7 +102,6 @@ function _createcontainers() {
         -p 9117:9117 \
         linuxserver/jackett
 	docker start jackett
-	systemctl enable jackett
 
     # PlexRequests
 	docker pull linuxserver/plexrequests
@@ -124,7 +114,6 @@ function _createcontainers() {
         -p 3000:3000 \
         linuxserver/plexrequests
 	docker start plexrequests
-	systemctl enable plexrequests
 
     # Nginx
 	docker pull linuxserver/nginx
@@ -136,7 +125,6 @@ function _createcontainers() {
         -p 80:80 -p 443:443 \
         linuxserver/nginx
 	docker start nginx
-	systemctl enable nginx
 
     # CrashPlan
 	docker pull jrcs/crashplan
@@ -150,9 +138,27 @@ function _createcontainers() {
         -v $config:/docker \
         jrcs/crashplan:latest
 	docker start crashplan
-	systemctl enable crashplan
 
     sleep 60 # wait for containers to start
+
+    for d in $config/* ; do
+	cat > /etc/systemd/system/$(basename $d).service <<-'EOF'
+	[Unit]
+	Description=$(basename $d) container
+	Requires=docker.service
+	After=docker.service
+
+	[Service]
+	Restart=always
+	ExecStart=/usr/bin/docker start -a $(basename $d)
+	ExecStop=/usr/bin/docker stop -t 2 $(basename $d)
+
+	[Install]
+	WantedBy=default.target
+	EOF
+	systemctl daemon-reload
+	systemctl enable $(basename $d)
+    done
 
 }
 
@@ -186,79 +192,83 @@ function _reverseproxy() {
 
 function _nginx() {
 
+	apt-get update
+	apt-get upgrade -y
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default # Adjust IP in this file as needed
 	ip=$(wget -qO- http://ipecho.net/plain)
-	cat > $config/nginx/nginx/site-confs/default << EOF
-server {
-listen 80 default_server;
-server_name $domain www.$domain;
-return 301 https://\$server_name\$request_uri;
-}
+	cat > $config/nginx/nginx/site-confs/default <<-'EOF'
+		server {
+			listen 80 default_server;
+			server_name $domain www.$domain;
+			return 301 https://\$server_name\$request_uri;
+			}
 
-server {
-listen 443 default_server;
-server_name $domain www.$domain;
-ssl on;
-ssl_certificate /config/keys/bergplex.crt;
-ssl_certificate_key /config/keys/bergplex.key;
 
-auth_basic "Restricted";
-auth_basic_user_file /config/.htpasswd;
+		server {
+			listen 443 default_server;
+			server_name $domain www.$domain;
+			ssl on;
+			ssl_certificate /config/keys/bergplex.crt;
+			ssl_certificate_key /config/keys/bergplex.key;
 
-location /sonarr {
-proxy_pass http://$ip:8989;
-proxy_set_header Host \$host;
-proxy_set_header X-Real-IP \$remote_addr;
-proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-}
+			auth_basic "Restricted";
+			auth_basic_user_file /config/.htpasswd;
 
-location /deluge {
-proxy_pass http://$ip:8112/;
-proxy_set_header X-Deluge-Base "/deluge/";
-proxy_set_header Host \$host;
-proxy_set_header X-Real-IP \$remote_addr;
-proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-}
+			location /sonarr {
+				proxy_pass http://$ip:8989;
+				proxy_set_header Host \$host;
+				proxy_set_header X-Real-IP \$remote_addr;
+				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
 
-location /requests {
-auth_basic off;
-proxy_pass http://$ip:3000;
-proxy_set_header Host \$host;
-proxy_set_header X-Real-IP \$remote_addr;
-proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-}
+			location /deluge {
+				proxy_pass http://$ip:8112/;
+				proxy_set_header X-Deluge-Base "/deluge/";
+				proxy_set_header Host \$host;
+				proxy_set_header X-Real-IP \$remote_addr;
+				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
 
-location /sabnzbd {
-proxy_pass http://$ip:8080;
-proxy_set_header Host \$host;
-proxy_set_header X-Real-IP \$remote_addr;
-proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-}
+			location /requests {
+				auth_basic off;
+				proxy_pass http://$ip:3000;
+				proxy_set_header Host \$host;
+				proxy_set_header X-Real-IP \$remote_addr;
+				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
 
-location /couchpotato {
-proxy_pass http://$ip:5050;
-proxy_set_header Host \$host;
-proxy_set_header X-Real-IP \$remote_addr;
-proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-}
+			location /sabnzbd {
+				proxy_pass http://$ip:8080;
+				proxy_set_header Host \$host;
+				proxy_set_header X-Real-IP \$remote_addr;
+				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
 
-location /plexpy {
-proxy_pass http://$ip:8181;
-proxy_set_header Host \$host;
-proxy_set_header X-Real-IP \$remote_addr;
-proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-}
+			location /couchpotato {
+				proxy_pass http://$ip:5050;
+				proxy_set_header Host \$host;
+				proxy_set_header X-Real-IP \$remote_addr;
+				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
 
-location /jackett/ {
-proxy_pass http://$ip:9117/;
-proxy_set_header Host \$host;
-proxy_set_header X-Real-IP \$remote_addr;
-proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-}
+			location /plexpy {
+				proxy_pass http://$ip:8181;
+				proxy_set_header Host \$host;
+				proxy_set_header X-Real-IP \$remote_addr;
+				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
 
-}
-EOF
+			location /jackett/ {
+				proxy_pass http://$ip:9117/;
+				proxy_set_header Host \$host;
+				proxy_set_header X-Real-IP \$remote_addr;
+				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
+
+			}
+	EOF
+
 	chown $user:$user $config/nginx/nginx/site-confs/default
         apt-get install -y apache2-utils
 	htpasswd -b -c $config/nginx/.htpasswd $user $password
@@ -321,7 +331,14 @@ echo -n "Setting up nginx with basic authentication and SSL certificate ...";_ng
 echo
 echo -n "Setting permissions ..."; chown -R $user:$user $config $media $downloads & spinner $!;echo
 echo
-echo -n "Setup complete. Restore config data from CrashPlan now as needed. Ensure to stop affected containers first.";echo
+echo -n "Setup complete.";echo
+echo
+echo -n "Replace contents of CrashPlan .ui_info on local system with:";echo
+echo
+echo $(cat $config/crashplan/id/.ui_info) > /home/$user/temp.txt
+sed -i "s/0.0.0.0/$domain/" /home/$user/temp.txt
+cat /home/$user/temp.txt
+rm /home/$user/temp.txt
 echo
 echo -n "Enjoy!";echo
 echo
