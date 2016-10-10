@@ -116,17 +116,14 @@ function _createcontainers() {
 	docker start plexrequests
 
     # Nginx
-	docker run -d \
-  	--privileged \
-  	--name=nginx \
-  	-p 80:80 \
-  	-p 443:443 \
-  	-e EMAIL=$email \
-  	-e URL=$domain \
-  	-e SUBDOMAINS=www  \
-  	-e TZ=$timezone \
-  	-v $config/nginx:/config:rw \
-  	aptalca/nginx-letsencrypt
+	docker pull linuxserver/nginx
+        docker create \
+        --name=nginx \
+        -v /etc/localtime:/etc/localtime:ro \
+        -v $config/nginx:/config \
+        -e PGID=$gid -e PUID=$uid \
+        -p 80:80 -p 443:443 \
+        linuxserver/nginx
 	docker start nginx
 
     # CrashPlan
@@ -180,6 +177,8 @@ function _nginx() {
 
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default
+	rm $config/nginx/keys/*
+	cp server.* $config/nginx/keys
 	ip=$(wget -qO- http://ipecho.net/plain)
 	cat > $config/nginx/nginx/site-confs/default << EOF
 		server {
@@ -193,14 +192,11 @@ function _nginx() {
 			server_name $domain www.$domain;
 			ssl on;
 
-			ssl_certificate /config/keys/fullchain.pem;
-        		ssl_certificate_key /config/keys/privkey.pem;
-        		ssl_dhparam /config/nginx/dhparams.pem;
-        		ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AE$
-        		ssl_prefer_server_ciphers on;
+			ssl_certificate $config/nginx/keys/server.crt;
+        		ssl_certificate_key $config/nginx/keys/server.key;
 
 			auth_basic "Restricted";
-			auth_basic_user_file /config/.htpasswd;
+			auth_basic_user_file $config/.htpasswd;
 
 			location /sonarr {
 				proxy_pass http://$ip:8989;
