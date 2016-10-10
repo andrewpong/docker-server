@@ -156,10 +156,9 @@ function _createcontainers() {
 
 	[Install]
 	WantedBy=default.target
-	EOF
+EOF
 	systemctl daemon-reload
 	systemctl enable $dir
-EOF
     done
 }
 
