@@ -116,14 +116,17 @@ function _createcontainers() {
 	docker start plexrequests
 
     # Nginx
-	docker pull linuxserver/nginx
-        docker create \
-        --name=nginx \
-        -v /etc/localtime:/etc/localtime:ro \
-        -v $config/nginx:/config \
-        -e PGID=$gid -e PUID=$uid  \
-        -p 80:80 -p 443:443 \
-        linuxserver/nginx
+	docker run -d \
+  	--privileged \
+  	--name=nginx \
+  	-p 80:80 \
+  	-p 443:443 \
+  	-e EMAIL=$email \
+  	-e URL=$domain \
+  	-e SUBDOMAINS=www  \
+  	-e TZ=$timezone \
+  	-v $config/nginx:/config:rw \
+  	aptalca/nginx-letsencrypt
 	docker start nginx
 
     # CrashPlan
@@ -185,22 +188,19 @@ function _nginx() {
 			return 301 https://\$server_name\$request_uri;
 			}
 
-
 		server {
 			listen 443 default_server;
 			server_name $domain www.$domain;
 			ssl on;
+
 			ssl_certificate /config/keys/fullchain.pem;
-			ssl_certificate_key /config/keys/privkey.pem;
+        		ssl_certificate_key /config/keys/privkey.pem;
+        		ssl_dhparam /config/nginx/dhparams.pem;
+        		ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AE$
+        		ssl_prefer_server_ciphers on;
 
 			auth_basic "Restricted";
 			auth_basic_user_file /config/.htpasswd;
-
-			root /config/www;
-
-			location ~ /.well-known {
-        		        allow all;
-        			}
 
 			location /sonarr {
 				proxy_pass http://$ip:8989;
@@ -259,7 +259,7 @@ EOF
 	chown $user:$user $config/nginx/nginx/site-confs/default
         apt-get install -y apache2-utils
 	htpasswd -b -c $config/nginx/.htpasswd $user $password
-	apt-get install -y letsencrypt
+	docker start nginx
 
 }
 
@@ -320,10 +320,6 @@ echo
 echo -n "Applying reverse proxy settings to containers ...";_reverseproxy >/dev/null 2>&1 & spinner $!;echo
 echo
 echo -n "Setting up nginx with basic authentication and SSL certificate ...";_nginx >/dev/null 2>&1 & spinner $!;echo
-letsencrypt certonly -a webroot --webroot-path=$config/nginx/www -d $domain -d www.$domain
-ln -s /etc/letsencrypt/live/$domain/fullchain.pem $config/nginx/keys/fullchain.pem
-ln -s /etc/letsencrypt/live/$domain/privkey.pem $config/nginx/keys/privkey.pem
-docker start nginx
 echo
 echo -n "Setting permissions ..."; chown -R $user:$user $config $media $downloads & spinner $!;echo
 echo
