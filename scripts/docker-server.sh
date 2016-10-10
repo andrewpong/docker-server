@@ -260,10 +260,6 @@ EOF
         apt-get install -y apache2-utils
 	htpasswd -b -c $config/nginx/.htpasswd $user $password
 	apt-get install -y letsencrypt
-	letsencrypt certonly -a webroot --webroot-path=/var/www/html -d $domain -d www.$domain
-	ln -s /etc/letsencrypt/live/$domain/fullchain.pem $config/nginx/keys/bergplex.crt
-	ln -s /etc/letsencrypt/live/$domain/privkey.pum $config/nginx/keys/bergplex.key
-        docker start nginx
 
 }
 
@@ -319,6 +315,10 @@ echo
 echo -n "Applying reverse proxy settings to containers ...";_reverseproxy >/dev/null 2>&1 & spinner $!;echo
 echo
 echo -n "Setting up nginx with basic authentication and SSL certificate ...";_nginx >/dev/null 2>&1 & spinner $!;echo
+letsencrypt certonly -a webroot --webroot-path=/var/www/html -d $domain -d www.$domain
+ln -s /etc/letsencrypt/live/$domain/fullchain.pem $config/nginx/keys/bergplex.crt
+ln -s /etc/letsencrypt/live/$domain/privkey.pum $config/nginx/keys/bergplex.key
+docker start nginx
 echo
 echo -n "Setting permissions ..."; chown -R $user:$user $config $media $downloads & spinner $!;echo
 echo
