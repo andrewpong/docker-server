@@ -179,7 +179,7 @@ function _nginx() {
 	apt-get update
 	apt-get upgrade -y
 	docker stop nginx
-        rm $config/nginx/nginx/site-confs/default # Adjust IP in this file as needed
+        rm $config/nginx/nginx/site-confs/default
 	ip=$(wget -qO- http://ipecho.net/plain)
 	cat > $config/nginx/nginx/site-confs/default << EOF
 		server {
