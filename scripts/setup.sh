@@ -142,22 +142,23 @@ function _createcontainers() {
     sleep 60 # wait for containers to start
 
     for d in $config/* ; do
-	cat > /etc/systemd/system/$(basename $d).service <<-'EOF'
+	dir=$(basename $d)
+	cat > /etc/systemd/system/$dir.service <<-'EOF'
 	[Unit]
-	Description=$(basename $d) container
+	Description=$dir container
 	Requires=docker.service
 	After=docker.service
 
 	[Service]
 	Restart=always
-	ExecStart=/usr/bin/docker start -a $(basename $d)
-	ExecStop=/usr/bin/docker stop -t 2 $(basename $d)
+	ExecStart=/usr/bin/docker start -a $dir
+	ExecStop=/usr/bin/docker stop -t 2 $dir
 
 	[Install]
 	WantedBy=default.target
 	EOF
 	systemctl daemon-reload
-	systemctl enable $(basename $d)
+	systemctl enable $dir
 EOF
     done
 }
