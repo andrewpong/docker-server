@@ -158,35 +158,18 @@ function _createcontainers() {
 	EOF
 	systemctl daemon-reload
 	systemctl enable $(basename $d)
+EOF
     done
-
 }
 
 function _reverseproxy() {
 
-    # CouchPotato
-        docker stop couchpotato
-        rm $config/couchpotato/config.ini
-        cp ../apps/couchpotato/config.ini $config/couchpotato/
-        docker start couchpotato
-
-    # Jackett
-        docker stop jackett
-        rm $config/jackett/Jackett/ServerConfig.json
-        cp ../apps/jackett/ServerConfig.json $config/jackett/Jackett/
-        docker start jackett
-
-    #PlexPy
-        docker stop plexpy
-        rm $config/plexpy/config.ini
-        cp ../apps/plexpy/config.ini $config/plexpy/
-        docker start plexpy
-
-    # Sonarr
-        docker stop sonarr
-        rm $config/sonarr/config.xml
-        cp ../apps/sonarr/config.xml $config/sonarr/
-        docker start sonarr
+	docker stop couchpotato jackett plexpy sonarr
+	sed -i 's#url_base =#url_base = /couchpotato#' /opt/docker/couchpotato/config.ini
+	sed -i 's#"BasePathOverride": null#"BasePathOverride": "/jackett"#' /opt/docker/jackett/Jackett/ServerConfig.json
+	sed -i 's#http_root = ""#http_root = /plexpy#' /opt/docker/plexpy/config.ini
+	sed -i 's#<UrlBase></UrlBase>#<UrlBase>/sonarr</UrlBase>#' /opt/docker/sonarr/config.xml
+	docker start couchpotato jackett plexpy sonarr
 
 }
 
@@ -197,7 +180,7 @@ function _nginx() {
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default # Adjust IP in this file as needed
 	ip=$(wget -qO- http://ipecho.net/plain)
-	cat > $config/nginx/nginx/site-confs/default <<-'EOF'
+	cat > $config/nginx/nginx/site-confs/default << EOF
 		server {
 			listen 80 default_server;
 			server_name $domain www.$domain;
@@ -267,7 +250,7 @@ function _nginx() {
 				}
 
 			}
-	EOF
+EOF
 
 	chown $user:$user $config/nginx/nginx/site-confs/default
         apt-get install -y apache2-utils
@@ -296,7 +279,7 @@ OK=$(echo -e "[ ${bold}${green}DONE${normal} ]")
 echo
 echo -n "##### BERGPLEX MEDIA SERVER SCRIPT #####";echo
 echo
-read -p "User for containers and basic auth?  " user
+read -p "User for containers and basic authentication?  " user
 while true
 do
     echo
@@ -308,7 +291,7 @@ do
     echo "Please try again"
 done
 echo
-echo -n "What is your domain name? (e.g. bergplex.com) "; read domain
+echo -n "What is your domain name? "; read domain
 echo
 echo -n "What is the path to docker container config files? (do not include trailing /) "; read config
 echo
@@ -318,7 +301,6 @@ echo -n "What is the path to downloads? (do not include trailing /) "; read down
 echo
 echo -n "Installing docker ...";_installdocker >/dev/null 2>&1 & spinner $!;echo
 usermod -aG docker $user
-#newgrp docker
 uid=$(id -u $user)
 gid=$(id -g $user)
 timezone=$(cat /etc/timezone)
@@ -342,3 +324,7 @@ rm /home/$user/temp.txt
 echo
 echo -n "Enjoy!";echo
 echo
+echo -n "System will reboot in 30 seconds ...";echo
+echo
+sleep 30
+reboot -h now
