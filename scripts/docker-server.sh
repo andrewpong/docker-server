@@ -175,8 +175,6 @@ function _reverseproxy() {
 
 function _nginx() {
 
-	apt-get update
-	apt-get upgrade -y
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default
 	ip=$(wget -qO- http://ipecho.net/plain)
@@ -197,6 +195,12 @@ function _nginx() {
 
 			auth_basic "Restricted";
 			auth_basic_user_file /config/.htpasswd;
+
+			root /var/www/html;
+
+			location ~ /.well-known {
+        		        allow all;
+        			}
 
 			location /sonarr {
 				proxy_pass http://$ip:8989;
@@ -255,7 +259,10 @@ EOF
 	chown $user:$user $config/nginx/nginx/site-confs/default
         apt-get install -y apache2-utils
 	htpasswd -b -c $config/nginx/.htpasswd $user $password
-        cp ../ssl/bergplex.* $config/nginx/keys
+	apt-get install -y letsencrypt
+	letsencrypt certonly -a webroot --webroot-path=/var/www/html -d $domain -d www.$domain
+	ln -s /etc/letsencrypt/live/$domain/fullchain.pem $config/nginx/keys/bergplex.crt
+	ln -s /etc/letsencrypt/live/$domain/privkey.pum $config/nginx/keys/bergplex.key
         docker start nginx
 
 }
@@ -276,6 +283,8 @@ spinner() {
 }
 
 OK=$(echo -e "[ ${bold}${green}DONE${normal} ]")
+apt-get update
+apt-get upgrade -y
 echo
 echo -n "##### DOCKER-SERVER #####";echo
 echo
