@@ -302,11 +302,11 @@ echo
 echo -n "What is the path to media files? (do not include trailing /) "; read media
 echo
 echo -n "What is the path to downloads? (do not include trailing /) "; read downloads
-echo
-echo -n "Updating / upgrading system ...";_update >/dev/null 2>&1 & spinner $!;echo
-echo
-echo -n "Installing docker ...";_installdocker >/dev/null 2>&1 & spinner $!;echo
-usermod -aG docker $user
+#echo
+#echo -n "Updating / upgrading system ...";_update >/dev/null 2>&1 & spinner $!;echo
+#echo
+#echo -n "Installing docker ...";_installdocker >/dev/null 2>&1 & spinner $!;echo
+#usermod -aG docker $user
 uid=$(id -u $user)
 gid=$(id -g $user)
 timezone=$(cat /etc/timezone)
