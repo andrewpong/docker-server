@@ -2,7 +2,8 @@ Docker-Server
 
 After fresh Ubuntu Server 16.04 install, run the following commands:
 
-```git clone https://github.com/aberg83/docker-server.git
+```
+git clone https://github.com/aberg83/docker-server.git
 cd ~/docker-server 
 sudo ./docker-server.sh
 ```
