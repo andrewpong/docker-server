@@ -215,8 +215,6 @@ function _nginx() {
 
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default
-	#rm $config/nginx/keys/*
-	#cp server.* $config/nginx/keys
 	ip=$(wget -qO- http://ipecho.net/plain)
 	cat > $config/nginx/nginx/site-confs/default << EOF
 		server {
