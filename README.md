@@ -17,7 +17,13 @@ Note that as of now, PlexRequests.NET requires that Nginx be shut down and the b
 ```
 sudo systemctl stop nginx
 ```
-Next, visit "yourdomain.com":3579, change the base URL setting to '/request' and hit save. Now, start Nginx:
+Next, visit "yourdomain.com":3579, change the base URL setting to '/request' and hit save. Now, restart PlexRequests.NET:
+
+```
+sudo systemctl restart plexrequests
+```
+
+Finally, start Nginx:
 
 ```
 sudo systemctl start nginx
