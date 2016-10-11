@@ -20,10 +20,10 @@ Installed docker containers:
 - linuxserver/sonarr
 - linuxserver/plexpy
 - linuxserver/plexrequests
-- linuxserver/nginx
 - linuxserver/jackett
 - linuxserver/sabnzbd
 - linuxserver/deluge
+- aptalca/nginx-letsencrypt
 - jrcs/crashplan
 
 Known issues:
