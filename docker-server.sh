@@ -191,7 +191,7 @@ function _nginx() {
 
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default
-	ip=$(wget -qO- http://ipecho.net/plain)
+	ip=$(hostname -I)
 	cat > $config/nginx/nginx/site-confs/default << EOF
 		server {
 			listen 80 default_server;
