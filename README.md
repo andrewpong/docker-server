@@ -1,11 +1,9 @@
 Docker-Server
 
-After fresh Ubuntu Server 16.04 install, run the following commands:
+After fresh Ubuntu Server 16.04 install, run the following command:
 
 ```
-git clone https://github.com/aberg83/docker-server.git
-cd ~/docker-server 
-sudo ./docker-server.sh
+git clone https://github.com/aberg83/docker-server.git && cd ~/docker-server && sudo ./docker-server.sh
 ```
 
 The above assumes that you are initially logged in as a master user with sudo priveleges. This is the user you should select when running the script. System will reboot when script finishes. Make note of the CrashPlan .ui_info content at the end of the script execution. If you miss it before reboot, you can run 'cat "/path/to/config"/crashplan/id/.ui_info'.
