@@ -191,7 +191,7 @@ function _nginx() {
 
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default
-	ip=$(hostname -I)
+	ip=$(ifconfig ens18 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://')
 	cat > $config/nginx/nginx/site-confs/default << EOF
 		server {
 			listen 80 default_server;
