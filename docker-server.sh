@@ -10,8 +10,6 @@
 # Functions
 
 function _installdocker() {
-	
-	#curl -sSL https://get.docker.com/ | sh
 	apt-get install -y apt-transport-https ca-certificates
 	apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
 	echo "deb https://apt.dockerproject.org/repo ubuntu-xenial main" > /etc/apt/sources.list.d/docker.list
@@ -241,6 +239,13 @@ function _nginx() {
 
 			location /sonarr {
 				proxy_pass http://$ip:8989;
+				proxy_set_header Host \$host;
+				proxy_set_header X-Real-IP \$remote_addr;
+				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
+				
+			location /web {
+				proxy_pass http://$ip:32400;
 				proxy_set_header Host \$host;
 				proxy_set_header X-Real-IP \$remote_addr;
 				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
