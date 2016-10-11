@@ -37,7 +37,7 @@ function _createcontainers() {
         -e PUID=$uid -e PGID=$gid \
         -e TZ=$timezone \
         -v $config/plex:/config \
-        -v $media:/data \
+        -v $media:/media \
         linuxserver/plex
 	docker start plex
 
@@ -47,7 +47,7 @@ function _createcontainers() {
         --name=couchpotato \
         -v $config/couchpotato:/config \
         -v $downloads:/downloads \
-        -v $media/Movies:/movies \
+        -v $media:/media \
         -e PGID=$gid -e PUID=$uid  \
         -e TZ=$timezone \
         -p 5050:5050 \
@@ -62,7 +62,7 @@ function _createcontainers() {
         -e PUID=$uid -e PGID=$gid \
         -v /dev/rtc:/dev/rtc:ro \
         -v $config/sonarr:/config \
-        -v $media/TV\ Shows:/tv \
+        -v $media:/media \
         -v $downloads:/downloads \
         linuxserver/sonarr
 	docker start sonarr
@@ -84,8 +84,7 @@ function _createcontainers() {
         docker create \
         --name=sabnzbd \
         -v $config/sabnzbd:/config \
-        -v $downloads/Usenet:/downloads \
-        -v $downloads/Usenet/incomplete:/incomplete-downloads \
+        -v $downloads:/downloads \
         -e PGID=$gid -e PUID=$uid \
         -e TZ=$timezone \
         -p 8080:8080 -p 9090:9090 \
@@ -99,7 +98,7 @@ function _createcontainers() {
         --net=host \
         -e PUID=$uid -e PGID=$gid \
         -e TZ=$timezone \
-        -v $downloads/Torrents:/downloads \
+        -v $downloads:/downloads \
         -v $config/deluge:/config \
         linuxserver/deluge
 	docker start deluge
@@ -109,24 +108,12 @@ function _createcontainers() {
         docker create \
         --name=jackett \
         -v $config/jackett:/config \
-        -v $downloads/Torrents/watch:/downloads \
+        -v $downloads:/downloads \
         -e PGID=$gid -e PUID=$uid \
         -e TZ=$timezone \
         -p 9117:9117 \
         linuxserver/jackett
 	docker start jackett
-
-    # PlexRequests (original)
-	#docker pull linuxserver/plexrequests
-        #docker create \
-        #--name=plexrequests \
-        #-v /etc/localtime:/etc/localtime:ro \
-        #-v $config/plexrequests:/config \
-        #-e PGID=$gid -e PUID=$uid  \
-        #-e URL_BASE=/requests \
-        #-p 3000:3000 \
-        #linuxserver/plexrequests
-	#docker start plexrequests
 	
     # PlexRequests.NET
 	docker pull rogueosb/plexrequestsnet
@@ -137,17 +124,6 @@ function _createcontainers() {
 	-v $config/plexrequests:/config \
 	rogueosb/plexrequestsnet
 	docker start plexrequests
-
-    # Nginx (original)
-	#docker pull linuxserver/nginx
-        #docker create \
-        #--name=nginx \
-        #-v /etc/localtime:/etc/localtime:ro \
-        #-v $config/nginx:/config \
-        #-e PGID=$gid -e PUID=$uid \
-        #-p 80:80 -p 443:443 \
-        #linuxserver/nginx
-	#docker start nginx
 	
     # Nginx-Let's Encrypt
 	docker pull aptalca/nginx-letsencrypt
