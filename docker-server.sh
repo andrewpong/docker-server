@@ -21,7 +21,7 @@ function _installdocker() {
 	apt-get update
 	apt-get install -y linux-image-extra-$(uname -r) linux-image-extra-virtual
 	apt-get update
-	apt-get install docker-engine
+	apt-get install -y docker-engine
 	service docker start
 	groupadd docker
 	usermod -aG docker $user
