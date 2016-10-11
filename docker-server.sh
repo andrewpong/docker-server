@@ -156,7 +156,7 @@ function _createcontainers() {
 	--name=nginx \
 	-p 80:80 \
 	-p 443:443 \
-	-e EMAIL=andrew@bergweb.ca \
+	-e EMAIL=$email \
 	-e URL=$domain \
 	-e SUBDOMAINS=www  \
 	-e TZ=$timezone \
@@ -342,6 +342,8 @@ do
 done
 echo
 echo -n "What is your domain name? "; read domain
+echo
+echo -n "What is your email address? "; read email
 echo
 echo -n "What is the path to docker container config files? (do not include trailing /) "; read config
 echo
