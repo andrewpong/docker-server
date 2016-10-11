@@ -10,7 +10,22 @@
 # Functions
 
 function _installdocker() {
-    curl -sSL https://get.docker.com/ | sh
+	
+	#curl -sSL https://get.docker.com/ | sh
+	apt-get install -y apt-transport-https ca-certificates
+	apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+	echo "deb https://apt.dockerproject.org/repo ubuntu-xenial main" > /etc/apt/sources.list.d/docker.list
+	apt-get update
+	apt-get purge -y lxc-docker
+	apt-cache policy docker-engine
+	apt-get update
+	apt-get install -y linux-image-extra-$(uname -r) linux-image-extra-virtual
+	apt-get update
+	apt-get install docker-engine
+	service docker start
+	groupadd docker
+	usermod -aG docker $user
+	systemctl enable docker
 }
 
 function _createcontainers() {
@@ -103,16 +118,26 @@ function _createcontainers() {
         linuxserver/jackett
 	docker start jackett
 
-    # PlexRequests
-	docker pull linuxserver/plexrequests
-        docker create \
-        --name=plexrequests \
-        -v /etc/localtime:/etc/localtime:ro \
-        -v $config/plexrequests:/config \
-        -e PGID=$gid -e PUID=$uid  \
-        -e URL_BASE=/requests \
-        -p 3000:3000 \
-        linuxserver/plexrequests
+    # PlexRequests (original)
+	#docker pull linuxserver/plexrequests
+        #docker create \
+        #--name=plexrequests \
+        #-v /etc/localtime:/etc/localtime:ro \
+        #-v $config/plexrequests:/config \
+        #-e PGID=$gid -e PUID=$uid  \
+        #-e URL_BASE=/requests \
+        #-p 3000:3000 \
+        #linuxserver/plexrequests
+	#docker start plexrequests
+	
+    # PlexRequests.NET
+	docker pull rogueosb/plexrequestsnet
+	docker run -d -i \
+	--name=plexrequests \
+	--restart=always \
+	-p 3579:3579 \
+	-v $config/plexrequests:/config \
+	rogueosb/plexrequestsnet
 	docker start plexrequests
 
     # Nginx (original)
@@ -229,9 +254,9 @@ function _nginx() {
 				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 				}
 
-			location /requests {
+			location /request {
 				auth_basic off;
-				proxy_pass http://$ip:3000;
+				proxy_pass http://$ip:3579;
 				proxy_set_header Host \$host;
 				proxy_set_header X-Real-IP \$remote_addr;
 				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -318,11 +343,10 @@ echo
 echo -n "What is the path to media files? (do not include trailing /) "; read media
 echo
 echo -n "What is the path to downloads? (do not include trailing /) "; read downloads
-#echo
-#echo -n "Updating / upgrading system ...";_update >/dev/null 2>&1 & spinner $!;echo
-#echo
+echo
+echo -n "Updating / upgrading system ...";_update >/dev/null 2>&1 & spinner $!;echo
+echo
 echo -n "Installing docker ...";_installdocker >/dev/null 2>&1 & spinner $!;echo
-usermod -aG docker $user
 uid=$(id -u $user)
 gid=$(id -g $user)
 timezone=$(cat /etc/timezone)
