@@ -115,15 +115,30 @@ function _createcontainers() {
         linuxserver/plexrequests
 	docker start plexrequests
 
-    # Nginx
-	docker pull linuxserver/nginx
-        docker create \
-        --name=nginx \
-        -v /etc/localtime:/etc/localtime:ro \
-        -v $config/nginx:/config \
-        -e PGID=$gid -e PUID=$uid \
-        -p 80:80 -p 443:443 \
-        linuxserver/nginx
+    # Nginx (original)
+	#docker pull linuxserver/nginx
+        #docker create \
+        #--name=nginx \
+        #-v /etc/localtime:/etc/localtime:ro \
+        #-v $config/nginx:/config \
+        #-e PGID=$gid -e PUID=$uid \
+        #-p 80:80 -p 443:443 \
+        #linuxserver/nginx
+	#docker start nginx
+	
+    # Nginx-Let's Encrypt
+	docker pull aptalca/nginx-letsencrypt
+	docker run -d \
+	--privileged \
+	--name=nginx \
+	-p 80:80 \
+	-p 443:443 \
+	-e EMAIL=andrew@bergweb.ca \
+	-e URL=$domain \
+	-e SUBDOMAINS=www  \
+	-e TZ=$timezone \
+	-v $config/nginx:/config:rw \
+	aptalca/nginx-letsencrypt
 	docker start nginx
 
     # CrashPlan
@@ -177,8 +192,8 @@ function _nginx() {
 
 	docker stop nginx
         rm $config/nginx/nginx/site-confs/default
-	rm $config/nginx/keys/*
-	cp server.* $config/nginx/keys
+	#rm $config/nginx/keys/*
+	#cp server.* $config/nginx/keys
 	ip=$(wget -qO- http://ipecho.net/plain)
 	cat > $config/nginx/nginx/site-confs/default << EOF
 		server {
@@ -191,10 +206,11 @@ function _nginx() {
 			listen 443 default_server;
 			server_name $domain www.$domain;
 			ssl on;
-
-			ssl_certificate /config/keys/server.crt;
-        		ssl_certificate_key /config/keys/server.key;
-
+			ssl_certificate /config/keys/fullchain.pem;
+        		ssl_certificate_key /config/keys/privkey.pem;
+        		ssl_dhparam /config/nginx/dhparams.pem;
+        		ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';
+        		ssl_prefer_server_ciphers on;
 			auth_basic "Restricted";
 			auth_basic_user_file /config/.htpasswd;
 
@@ -305,8 +321,8 @@ echo -n "What is the path to downloads? (do not include trailing /) "; read down
 #echo
 #echo -n "Updating / upgrading system ...";_update >/dev/null 2>&1 & spinner $!;echo
 #echo
-#echo -n "Installing docker ...";_installdocker >/dev/null 2>&1 & spinner $!;echo
-#usermod -aG docker $user
+echo -n "Installing docker ...";_installdocker >/dev/null 2>&1 & spinner $!;echo
+usermod -aG docker $user
 uid=$(id -u $user)
 gid=$(id -g $user)
 timezone=$(cat /etc/timezone)
