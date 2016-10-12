@@ -79,7 +79,6 @@ function _createcontainers() {
 	-e VIRTUAL_HOST=couchpotato.$domain \
 	-e LETSENCRYPT_HOST=couchpotato.$domain \
 	-e LETSENCRYPT_EMAIL=$email \
-	-e LETSENCRYPT_TEST=true
         linuxserver/couchpotato
 	docker start couchpotato
 
@@ -96,7 +95,6 @@ function _createcontainers() {
 	-e VIRTUAL_HOST=sonarr.$domain \
         -e LETSENCRYPT_HOST=sonarr.$domain \
         -e LETSENCRYPT_EMAIL=$email \
-        -e LETSENCRYPT_TEST=true
         linuxserver/sonarr
 	docker start sonarr
 
@@ -112,7 +110,6 @@ function _createcontainers() {
 	-e VIRTUAL_HOST=plexpy.$domain \
         -e LETSENCRYPT_HOST=plexpy.$domain \
         -e LETSENCRYPT_EMAIL=$email \
-        -e LETSENCRYPT_TEST=true
         linuxserver/plexpy
 	docker start plexpy
 
@@ -128,7 +125,6 @@ function _createcontainers() {
 	-e VIRTUAL_HOST=sabnzbd.$domain \
         -e LETSENCRYPT_HOST=sabnzbd.$domain \
         -e LETSENCRYPT_EMAIL=$email \
-        -e LETSENCRYPT_TEST=true
         linuxserver/sabnzbd
 	docker start sabnzbd
 
@@ -146,7 +142,6 @@ function _createcontainers() {
 	-e VIRTUAL_HOST=deluge.$domain \
         -e LETSENCRYPT_HOST=deluge.$domain \
         -e LETSENCRYPT_EMAIL=$email \
-        -e LETSENCRYPT_TEST=true
         linuxserver/deluge
 	docker start deluge
 
@@ -162,7 +157,6 @@ function _createcontainers() {
 	-e VIRTUAL_HOST=jackett.$domain \
         -e LETSENCRYPT_HOST=jackett.$domain \
         -e LETSENCRYPT_EMAIL=$email \
-        -e LETSENCRYPT_TEST=true
         linuxserver/jackett
 	docker start jackett
 
@@ -173,8 +167,8 @@ function _createcontainers() {
 	--restart=always \
 	-p 3579:3579 \
 	-v $config/plexrequests:/config \
-	-e VIRTUAL_HOST=requests.$domain \
-        -e LETSENCRYPT_HOST=requests.$domain \
+	-e VIRTUAL_HOST=plexrequests.$domain \
+        -e LETSENCRYPT_HOST=plexrequests.$domain \
         -e LETSENCRYPT_EMAIL=$email \
         -e LETSENCRYPT_TEST=true
 	rogueosb/plexrequestsnet
@@ -223,11 +217,30 @@ EOF
 	systemctl enable $dir
 	htpasswd -b -c $config/nginx/htpasswd/$dir.$domain $user $password
     done
+    
+    # Setup systemd for letsencrypt as it does not have a folder in /opt
+    
+    cat > /etc/systemd/system/letsencrypt.service << EOF
+	[Unit]
+	Description=letsencrypt container
+	Requires=docker.service
+	After=docker.service
+
+	[Service]
+	Restart=always
+	ExecStart=/usr/bin/docker start -a letsencrypt
+	ExecStop=/usr/bin/docker stop -t 2 letsencrypt
+
+	[Install]
+	WantedBy=default.target
+EOF
+	systemctl daemon-reload
+	systemctl enable letsencrypt
 
     # Remove basic authentication for PlexRequests.NET
 
-    rm $config/nginx/htpasswd/requests.$domain
-    docker restart nginx
+    rm $config/nginx/htpasswd/plexrequests.$domain
+    systemctl restart nginx
     docker restart letsencrypt
 }
 
@@ -279,16 +292,16 @@ echo -n "What is the path to media files? (do not include trailing /) "; read me
 echo
 echo -n "What is the path to downloads? (do not include trailing /) "; read downloads
 echo
-echo -n "Updating / upgrading system ...";_update & spinner $!;echo
+echo -n "Updating / upgrading system ...";_update #& spinner $!;echo
 echo
-echo -n "Installing docker ...";_installdocker & spinner $!;echo
+echo -n "Installing docker ...";_installdocker #& spinner $!;echo
 uid=$(id -u $user)
 gid=$(id -g $user)
 timezone=$(cat /etc/timezone)
 echo
-echo -n "Creating docker containers ...";_createcontainers & spinner $!;echo
+echo -n "Creating docker containers ...";_createcontainers #& spinner $!;echo
 echo
-echo -n "Setting permissions ..."; chown -R $user:$user $config $media $downloads & spinner $!;echo
+echo -n "Setting permissions ..."; chown -R $user:$user $config $media $downloads #& spinner $!;echo
 echo
 echo -n "Setup complete.";echo
 echo
