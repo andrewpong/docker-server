@@ -30,32 +30,38 @@ function _createcontainers() {
 
     # Create and start containers
 
-    # Nginx-proxy
-        docker pull jwilder/nginx-proxy
-        docker run -d \
-        -p 80:80 -p 443:443 \
-        --name nginx \
-	-v $config/nginx/htpasswd:/etc/nginx/htpasswd \
-	-v $config/nginx/keys:/etc/nginx/certs:ro \
-        -v /etc/nginx/vhost.d \
-        -v /usr/share/nginx/html \
-        -v /var/run/docker.sock:/tmp/docker.sock:ro \
-        jwilder/nginx-proxy
-        docker start nginx
+    # Nginx
+    	docker run -d \
+	--name nginx \
+	-p 80:80 -p 443:443 \
+    	-v /etc/nginx/conf.d  \
+    	-v /etc/nginx/vhost.d \
+    	-v /usr/share/nginx/html \
+    	-v $config/nginx/keys:/etc/nginx/certs:ro \
+    	nginx
 
-    # Letsencrypt-nginx-proxy-companion
-        docker pull jrcs/letsencrypt-nginx-proxy-companion
-        docker run -d \
-	--name letsencrypt \
-        -v $config/nginx/keys:/etc/nginx/certs:rw \
-        --volumes-from nginx \
-        -v /var/run/docker.sock:/var/run/docker.sock:ro \
-        jrcs/letsencrypt-nginx-proxy-companion
-	docker start letsencrypt
+	curl https://raw.githubusercontent.com/jwilder/nginx-proxy/master/nginx.tmpl > $config/nginx/nginx.tmpl
+
+    # Nginx-gen
+    	docker run -d \
+    	--name nginx-gen \
+    	--volumes-from nginx \
+    	-v $config/nginx/nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro \
+    	-v /var/run/docker.sock:/tmp/docker.sock:ro \
+    	jwilder/docker-gen \
+    	-notify-sighup nginx -watch -only-exposed -wait 5s:30s /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
+
+    # Nginx-letsencrypt
+    	docker run -d \
+    	--name nginx-letsencrypt \
+    	-e "NGINX_DOCKER_GEN_CONTAINER=nginx-gen" \
+    	--volumes-from nginx \
+    	-v $config/nginx/keys:/etc/nginx/certs:rw \
+    	-v /var/run/docker.sock:/var/run/docker.sock:ro \
+    	jrcs/letsencrypt-nginx-proxy-companion
 
     # Plex
-	docker pull linuxserver/plex
-        docker create \
+        docker run -d \
         --name=plex \
         --net=host \
         -e VERSION=latest \
@@ -64,11 +70,9 @@ function _createcontainers() {
         -v $config/plex:/config \
         -v $media:/media \
         linuxserver/plex
-	docker start plex
 
     # CouchPotato
-	docker pull linuxserver/couchpotato
-        docker create \
+        docker run -d \
         --name=couchpotato \
         -v $config/couchpotato:/config \
         -v $downloads:/downloads \
@@ -80,11 +84,9 @@ function _createcontainers() {
 	-e LETSENCRYPT_HOST=couchpotato.$domain \
 	-e LETSENCRYPT_EMAIL=$email \
         linuxserver/couchpotato
-	docker start couchpotato
 
     # Sonarr
-	docker pull linuxserver/sonarr
-        docker create \
+        docker run -d \
         --name sonarr \
         -p 8989:8989 \
         -e PUID=$uid -e PGID=$gid \
@@ -96,11 +98,9 @@ function _createcontainers() {
         -e LETSENCRYPT_HOST=sonarr.$domain \
         -e LETSENCRYPT_EMAIL=$email \
         linuxserver/sonarr
-	docker start sonarr
 
     # PlexPy
-	docker pull linuxserver/plexpy
-        docker create \
+        docker run -d \
         --name=plexpy \
         -v $config/plexpy:/config \
         -v $config/plex/Library/Application\ Support/Plex\ Media\ Server/Logs:/logs:ro \
@@ -111,11 +111,9 @@ function _createcontainers() {
         -e LETSENCRYPT_HOST=plexpy.$domain \
         -e LETSENCRYPT_EMAIL=$email \
         linuxserver/plexpy
-	docker start plexpy
 
     # SABnzbd
-	docker pull linuxserver/sabnzbd
-        docker create \
+        docker run -d \
         --name=sabnzbd \
         -v $config/sabnzbd:/config \
         -v $downloads:/downloads \
@@ -126,11 +124,9 @@ function _createcontainers() {
         -e LETSENCRYPT_HOST=sabnzbd.$domain \
         -e LETSENCRYPT_EMAIL=$email \
         linuxserver/sabnzbd
-	docker start sabnzbd
 
     # Deluge
-	docker pull linuxserver/deluge
-        docker create \
+        docker run -d \
         --name deluge \
 	-p 8112:8112 \
 	-p 58846:58846 \
@@ -143,11 +139,9 @@ function _createcontainers() {
         -e LETSENCRYPT_HOST=deluge.$domain \
         -e LETSENCRYPT_EMAIL=$email \
         linuxserver/deluge
-	docker start deluge
 
     # Jackett
-	docker pull linuxserver/jackett
-        docker create \
+        docker run -d \
         --name=jackett \
         -v $config/jackett:/config \
         -v $downloads:/downloads \
@@ -158,10 +152,8 @@ function _createcontainers() {
         -e LETSENCRYPT_HOST=jackett.$domain \
         -e LETSENCRYPT_EMAIL=$email \
         linuxserver/jackett
-	docker start jackett
 
     # PlexRequests.NET
-	docker pull rogueosb/plexrequestsnet
 	docker run -d -i \
 	--name=plexrequests \
 	--restart=always \
@@ -171,10 +163,8 @@ function _createcontainers() {
         -e LETSENCRYPT_HOST=plexrequests.$domain \
         -e LETSENCRYPT_EMAIL=$email \
 	rogueosb/plexrequestsnet
-	docker start plexrequests
 
     # CrashPlan
-	docker pull jrcs/crashplan
         docker run -d \
         --name crashplan \
         -h $HOSTNAME \
@@ -184,11 +174,10 @@ function _createcontainers() {
         -v $media:/media \
         -v $config:/docker \
         jrcs/crashplan:latest
-	docker start crashplan
 
     # Wait for containers to start
 
-    sleep 60
+    sleep 30
 
     # Install htpasswd for basic authentication setup
 
@@ -240,7 +229,7 @@ EOF
 
     rm $config/nginx/htpasswd/plexrequests.$domain
     systemctl restart nginx
-    docker restart letsencrypt
+    docker restart nginx-letsencrypt
 }
 
 function _update() {
@@ -304,16 +293,3 @@ echo -n "Setting permissions ..."; chown -R $user:$user $config $media $download
 echo
 echo -n "Setup complete.";echo
 echo
-echo -n "Replace contents of CrashPlan .ui_info on local system with:";echo
-echo
-echo $(cat $config/crashplan/id/.ui_info) > /home/$user/temp.txt
-sed -i "s/0.0.0.0/$domain/" /home/$user/temp.txt
-cat /home/$user/temp.txt
-rm /home/$user/temp.txt
-echo
-echo -n "Enjoy!";echo
-echo
-echo -n "System will reboot in 30 seconds ...";echo
-echo
-sleep 30
-reboot -h now
