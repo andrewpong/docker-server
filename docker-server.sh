@@ -279,14 +279,14 @@ echo -n "What is the path to media files? (do not include trailing /) "; read me
 echo
 echo -n "What is the path to downloads? (do not include trailing /) "; read downloads
 echo
-echo -n "Updating / upgrading system ...";_update >/dev/null 2>&1 & spinner $!;echo
+echo -n "Updating / upgrading system ...";_update & spinner $!;echo
 echo
-echo -n "Installing docker ...";_installdocker >/dev/null 2>&1 & spinner $!;echo
+echo -n "Installing docker ...";_installdocker & spinner $!;echo
 uid=$(id -u $user)
 gid=$(id -g $user)
 timezone=$(cat /etc/timezone)
 echo
-echo -n "Creating docker containers ...";_createcontainers >/dev/null 2>&1 & spinner $!;echo
+echo -n "Creating docker containers ...";_createcontainers & spinner $!;echo
 echo
 echo -n "Setting permissions ..."; chown -R $user:$user $config $media $downloads & spinner $!;echo
 echo
