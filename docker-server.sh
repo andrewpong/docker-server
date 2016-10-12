@@ -170,7 +170,6 @@ function _createcontainers() {
 	-e VIRTUAL_HOST=plexrequests.$domain \
         -e LETSENCRYPT_HOST=plexrequests.$domain \
         -e LETSENCRYPT_EMAIL=$email \
-        -e LETSENCRYPT_TEST=true
 	rogueosb/plexrequestsnet
 	docker start plexrequests
 
