@@ -48,7 +48,7 @@ function _createcontainers() {
         docker run -d \
 	--name letsencrypt
         -v $config/nginx/keys:/etc/nginx/certs:rw \
-        --volumes-from nginx-proxy \
+        --volumes-from nginx \
         -v /var/run/docker.sock:/var/run/docker.sock:ro \
         jrcs/letsencrypt-nginx-proxy-companion
 	docker start letsencrypt
