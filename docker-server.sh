@@ -55,6 +55,7 @@ function _createcontainers() {
     	docker run -d \
     	--name nginx-letsencrypt \
     	-e "NGINX_DOCKER_GEN_CONTAINER=nginx-gen" \
+	-e "ACME_CA_URI=https://acme-staging.api.letsencrypt.org/directory" \
     	--volumes-from nginx \
     	-v $config/nginx/keys:/etc/nginx/certs:rw \
     	-v /var/run/docker.sock:/var/run/docker.sock:ro \
