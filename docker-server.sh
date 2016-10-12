@@ -227,6 +227,8 @@ EOF
     # Remove basic authentication for PlexRequests.NET
 
     rm $config/nginx/htpasswd/requests.$domain
+    docker restart nginx
+    docker restart letsencrypt
 }
 
 function _update() {
