@@ -28,6 +28,31 @@ function _installdocker() {
 
 function _createcontainers() {
 
+    # Create and start containers
+
+    # Nginx-proxy
+        docker pull jwilder/nginx-proxy
+        docker run -d \
+        -p 80:80 -p 443:443 \
+        --name nginx \
+	-v $config/nginx/htpasswd:/etc/nginx/htpasswd \
+	-v $config/nginx/keys:/etc/nginx/certs:ro \
+        -v /etc/nginx/vhost.d \
+        -v /usr/share/nginx/html \
+        -v /var/run/docker.sock:/tmp/docker.sock:ro \
+        jwilder/nginx-proxy
+        docker start nginx
+
+    # Letsencrypt-nginx-proxy-companion
+        docker pull jrcs/letsencrypt-nginx-proxy-companion
+        docker run -d \
+	--name letsencrypt
+        -v $config/nginx/keys:/etc/nginx/certs:rw \
+        --volumes-from nginx-proxy \
+        -v /var/run/docker.sock:/var/run/docker.sock:ro \
+        jrcs/letsencrypt-nginx-proxy-companion
+	docker start letsencrypt
+
     # Plex
 	docker pull linuxserver/plex
         docker create \
@@ -51,6 +76,10 @@ function _createcontainers() {
         -e PGID=$gid -e PUID=$uid  \
         -e TZ=$timezone \
         -p 5050:5050 \
+	-e VIRTUAL_HOST=couchpotato.$domain \
+	-e LETSENCRYPT_HOST=couchpotato.$domain \
+	-e LETSENCRYPT_EMAIL=$email \
+	-e LETSENCRYPT_TEST=true
         linuxserver/couchpotato
 	docker start couchpotato
 
@@ -64,6 +93,10 @@ function _createcontainers() {
         -v $config/sonarr:/config \
         -v $media:/media \
         -v $downloads:/downloads \
+	-e VIRTUAL_HOST=sonarr.$domain \
+        -e LETSENCRYPT_HOST=sonarr.$domain \
+        -e LETSENCRYPT_EMAIL=$email \
+        -e LETSENCRYPT_TEST=true
         linuxserver/sonarr
 	docker start sonarr
 
@@ -76,6 +109,10 @@ function _createcontainers() {
         -e PGID=$gid -e PUID=$uid  \
         -e TZ=$timezone \
         -p 8181:8181 \
+	-e VIRTUAL_HOST=plexpy.$domain \
+        -e LETSENCRYPT_HOST=plexpy.$domain \
+        -e LETSENCRYPT_EMAIL=$email \
+        -e LETSENCRYPT_TEST=true
         linuxserver/plexpy
 	docker start plexpy
 
@@ -88,6 +125,10 @@ function _createcontainers() {
         -e PGID=$gid -e PUID=$uid \
         -e TZ=$timezone \
         -p 8080:8080 -p 9090:9090 \
+	-e VIRTUAL_HOST=sabnzbd.$domain \
+        -e LETSENCRYPT_HOST=sabnzbd.$domain \
+        -e LETSENCRYPT_EMAIL=$email \
+        -e LETSENCRYPT_TEST=true
         linuxserver/sabnzbd
 	docker start sabnzbd
 
@@ -95,11 +136,17 @@ function _createcontainers() {
 	docker pull linuxserver/deluge
         docker create \
         --name deluge \
-        --net=host \
+	-p 8112:8112 \
+	-p 58846:58846 \
+	-p 58946:58946 \
         -e PUID=$uid -e PGID=$gid \
         -e TZ=$timezone \
         -v $downloads:/downloads \
         -v $config/deluge:/config \
+	-e VIRTUAL_HOST=deluge.$domain \
+        -e LETSENCRYPT_HOST=deluge.$domain \
+        -e LETSENCRYPT_EMAIL=$email \
+        -e LETSENCRYPT_TEST=true
         linuxserver/deluge
 	docker start deluge
 
@@ -112,9 +159,13 @@ function _createcontainers() {
         -e PGID=$gid -e PUID=$uid \
         -e TZ=$timezone \
         -p 9117:9117 \
+	-e VIRTUAL_HOST=jackett.$domain \
+        -e LETSENCRYPT_HOST=jackett.$domain \
+        -e LETSENCRYPT_EMAIL=$email \
+        -e LETSENCRYPT_TEST=true
         linuxserver/jackett
 	docker start jackett
-	
+
     # PlexRequests.NET
 	docker pull rogueosb/plexrequestsnet
 	docker run -d -i \
@@ -122,23 +173,12 @@ function _createcontainers() {
 	--restart=always \
 	-p 3579:3579 \
 	-v $config/plexrequests:/config \
+	-e VIRTUAL_HOST=requests.$domain \
+        -e LETSENCRYPT_HOST=requests.$domain \
+        -e LETSENCRYPT_EMAIL=$email \
+        -e LETSENCRYPT_TEST=true
 	rogueosb/plexrequestsnet
 	docker start plexrequests
-	
-    # Nginx-Let's Encrypt
-	docker pull aptalca/nginx-letsencrypt
-	docker run -d \
-	--privileged \
-	--name=nginx \
-	-p 80:80 \
-	-p 443:443 \
-	-e EMAIL=$email \
-	-e URL=$domain \
-	-e SUBDOMAINS=www  \
-	-e TZ=$timezone \
-	-v $config/nginx:/config:rw \
-	aptalca/nginx-letsencrypt
-	docker start nginx
 
     # CrashPlan
 	docker pull jrcs/crashplan
@@ -153,7 +193,15 @@ function _createcontainers() {
         jrcs/crashplan:latest
 	docker start crashplan
 
-    sleep 60 # wait for containers to start
+    # Wait for containers to start
+
+    sleep 60
+
+    # Install htpasswd for basic authentication setup
+
+    apt-get install -y apache2-utils
+
+    # Setup systemd and basic authentication for each container
 
     for d in $config/* ; do
 	dir=$(basename $d)
@@ -173,110 +221,12 @@ function _createcontainers() {
 EOF
 	systemctl daemon-reload
 	systemctl enable $dir
+	htpasswd -b -c $config/nginx/htpasswd/$dir.$domain $user $password
     done
-}
 
-function _reverseproxy() {
+    # Remove basic authentication for PlexRequests.NET
 
-	docker stop couchpotato jackett plexpy sonarr
-	sed -i 's#url_base =#url_base = /couchpotato#' /opt/docker/couchpotato/config.ini
-	sed -i 's#"BasePathOverride": null#"BasePathOverride": "/jackett"#' /opt/docker/jackett/Jackett/ServerConfig.json
-	sed -i 's#http_root = ""#http_root = /plexpy#' /opt/docker/plexpy/config.ini
-	sed -i 's#<UrlBase></UrlBase>#<UrlBase>/sonarr</UrlBase>#' /opt/docker/sonarr/config.xml
-	docker start couchpotato jackett plexpy sonarr
-
-}
-
-function _nginx() {
-
-	docker stop nginx
-        rm $config/nginx/nginx/site-confs/default
-	ip=$(ifconfig ens18 2>/dev/null|awk '/inet addr:/ {print $2}'|sed 's/addr://')
-	cat > $config/nginx/nginx/site-confs/default << EOF
-		server {
-			listen 80 default_server;
-			server_name $domain www.$domain;
-			return 301 https://\$server_name\$request_uri;
-			}
-
-		server {
-			listen 443 default_server;
-			server_name $domain www.$domain;
-			ssl on;
-			ssl_certificate /config/keys/fullchain.pem;
-        		ssl_certificate_key /config/keys/privkey.pem;
-        		ssl_dhparam /config/nginx/dhparams.pem;
-        		ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';
-        		ssl_prefer_server_ciphers on;
-			auth_basic "Restricted";
-			auth_basic_user_file /config/.htpasswd;
-
-			location /sonarr {
-				proxy_pass http://$ip:8989;
-				proxy_set_header Host \$host;
-				proxy_set_header X-Real-IP \$remote_addr;
-				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-				}
-				
-			location /web {
-				proxy_pass http://$ip:32400;
-				proxy_set_header Host \$host;
-				proxy_set_header X-Real-IP \$remote_addr;
-				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-				}
-
-			location /deluge {
-				proxy_pass http://$ip:8112/;
-				proxy_set_header X-Deluge-Base "/deluge/";
-				proxy_set_header Host \$host;
-				proxy_set_header X-Real-IP \$remote_addr;
-				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-				}
-
-			location /request {
-				auth_basic off;
-				proxy_pass http://$ip:3579;
-				proxy_set_header Host \$host;
-				proxy_set_header X-Real-IP \$remote_addr;
-				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-				}
-
-			location /sabnzbd {
-				proxy_pass http://$ip:8080;
-				proxy_set_header Host \$host;
-				proxy_set_header X-Real-IP \$remote_addr;
-				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-				}
-
-			location /couchpotato {
-				proxy_pass http://$ip:5050;
-				proxy_set_header Host \$host;
-				proxy_set_header X-Real-IP \$remote_addr;
-				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-				}
-
-			location /plexpy {
-				proxy_pass http://$ip:8181;
-				proxy_set_header Host \$host;
-				proxy_set_header X-Real-IP \$remote_addr;
-				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-				}
-
-			location /jackett/ {
-				proxy_pass http://$ip:9117/;
-				proxy_set_header Host \$host;
-				proxy_set_header X-Real-IP \$remote_addr;
-				proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-				}
-
-			}
-EOF
-
-	chown $user:$user $config/nginx/nginx/site-confs/default
-        apt-get install -y apache2-utils
-	htpasswd -b -c $config/nginx/.htpasswd $user $password
-	docker start nginx
-
+    rm $config/nginx/htpasswd/requests.$domain
 }
 
 function _update() {
@@ -298,6 +248,8 @@ spinner() {
     printf "    \b\b\b\b"
     echo -ne "${OK}"
 }
+
+# Begin script
 
 OK=$(echo -e "[ ${bold}${green}DONE${normal} ]")
 echo
@@ -333,10 +285,6 @@ gid=$(id -g $user)
 timezone=$(cat /etc/timezone)
 echo
 echo -n "Creating docker containers ...";_createcontainers >/dev/null 2>&1 & spinner $!;echo
-echo
-echo -n "Applying reverse proxy settings to containers ...";_reverseproxy >/dev/null 2>&1 & spinner $!;echo
-echo
-echo -n "Setting up nginx with basic authentication and SSL certificate ...";_nginx >/dev/null 2>&1 & spinner $!;echo
 echo
 echo -n "Setting permissions ..."; chown -R $user:$user $config $media $downloads & spinner $!;echo
 echo
