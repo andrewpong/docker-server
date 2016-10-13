@@ -13,10 +13,12 @@ read -p "User for containers and basic authentication?  " user
 while true
 do
 read -s -p "Create password " password
+echo
 read -s -p "Verify password " password2
 [ "$password" = "$password2" ] && break
 echo "Please try again"
 done
+echo
 echo -n "What is your domain name? "; read domain
 echo -n "What is your email address? "; read email
 echo -n "What is the path to docker container config files? (do not include trailing /) "; read config
