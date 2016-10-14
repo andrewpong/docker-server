@@ -76,8 +76,9 @@ docker run -d \
 --volumes-from nginx \
 -v $config/nginx/nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro \
 -v /var/run/docker.sock:/tmp/docker.sock:ro \
-jwilder/docker-gen \
--notify-sighup nginx -watch -only-exposed -wait 5s:30s /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
+jwilder/docker-gen -notify-sighup nginx -watch -only-exposed /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
+
+
 
 # Nginx-letsencrypt
 docker run -d \
