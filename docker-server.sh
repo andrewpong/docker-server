@@ -187,16 +187,16 @@ docker run -d -i \
 -e LETSENCRYPT_EMAIL=$email \
 rogueosb/plexrequestsnet
 
-# CrashPlan
-docker run -d \
---name crashplan \
--h $HOSTNAME \
--e TZ=$timezone \
--p 4242:4242 -p 4243:4243 \
--v $config/crashplan:/var/crashplan \
--v $media:/media \
--v $config:/docker \
-jrcs/crashplan:latest
+# # CrashPlan
+# docker run -d \
+# --name crashplan \
+# -h $HOSTNAME \
+# -e TZ=$timezone \
+# -p 4242:4242 -p 4243:4243 \
+# -v $config/crashplan:/var/crashplan \
+# -v $media:/media \
+# -v $config:/docker \
+# jrcs/crashplan:latest
 
 # Install htpasswd for basic authentication setup
 
