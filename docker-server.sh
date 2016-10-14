@@ -228,6 +228,7 @@ WantedBy=default.target
 EOF
 systemctl daemon-reload
 systemctl enable $dir
+mkdir -p $config/nginx/htpasswd
 htpasswd -b -c $config/nginx/htpasswd/$dir.$domain $user $password
 done
     
