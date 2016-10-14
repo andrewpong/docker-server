@@ -62,8 +62,8 @@ systemctl enable docker
 docker run -d \
 --name nginx \
 -p 80:80 -p 443:443 \
--v /etc/nginx/conf.d  \
--v /etc/nginx/vhost.d \
+-v $config/nginx:/etc/nginx/conf.d  \
+-v $config/nginx:/etc/nginx/vhost.d \
 -v /usr/share/nginx/html \
 -v $config/nginx/keys:/etc/nginx/certs:ro \
 nginx
