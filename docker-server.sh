@@ -25,7 +25,7 @@ echo
 # echo -n "What is the path to media files? (do not include trailing /) "; read media
 # echo -n "What is the path to downloads? (do not include trailing /) "; read downloads
 
-domain=media.awp.io
+domain=awp.io
 email=a@awp.io
 config=/opt/docker
 media=/opt/media
