@@ -19,11 +19,17 @@ read -s -p "Verify password " password2
 echo "Please try again"
 done
 echo
-echo -n "What is your domain name? "; read domain
-echo -n "What is your email address? "; read email
-echo -n "What is the path to docker container config files? (do not include trailing /) "; read config
-echo -n "What is the path to media files? (do not include trailing /) "; read media
-echo -n "What is the path to downloads? (do not include trailing /) "; read downloads
+# echo -n "What is your domain name? "; read domain
+# echo -n "What is your email address? "; read email
+# echo -n "What is the path to docker container config files? (do not include trailing /) "; read config
+# echo -n "What is the path to media files? (do not include trailing /) "; read media
+# echo -n "What is the path to downloads? (do not include trailing /) "; read downloads
+
+domain=media.awp.io
+email=a@awp.io
+config=/opt/docker
+media=/opt/media
+downloads=/opt/incoming
 
 # Variables
 
